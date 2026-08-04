@@ -1,0 +1,10 @@
+{
+  "name": "tiktok-scraper",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "index.js",
+  "dependencies": {
+    "playwright": "^1.45.0",
+    "node-fetch": "^3.3.2"
+  }
+}
