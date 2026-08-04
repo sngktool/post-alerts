@@ -9,21 +9,52 @@ const ACCOUNTS = [
 ];
 
 // タグフィルタ
-const TAG = "#進撃くん"🔥";
+const TAG = "#進撃くん🔥";
 
 // Worker URL（Railwayの環境変数から読み込む）
 const WORKER_URL = process.env.WORKER_URL;
 
-// 夜中0〜6時は通知しない
-function isQuietHours() {
+// 通知可能時間（JST）
+const NOTIFY_START = 6;   // 6時から
+const NOTIFY_END = 23;    // 23時まで
+
+// 夜中に投稿された動画を保存するキュー
+const nightQueue = [];
+
+// JSTの現在時刻を取得
+function getJSTHour() {
   const now = new Date();
-  const jstHour = (now.getUTCHours() + 9) % 24;
-  return jstHour >= 0 && jstHour < 6;
+  return (now.getUTCHours() + 9) % 24;
+}
+
+// 通知可能時間か？
+function isNotifyHours() {
+  const h = getJSTHour();
+  return h >= NOTIFY_START && h < NOTIFY_END;
+}
+
+// 朝7時に夜中の投稿をまとめて通知
+async function flushNightQueue() {
+  const h = getJSTHour();
+  if (h !== 7) return; // 朝7時以外は何もしない
+
+  for (const item of nightQueue) {
+    await fetch(WORKER_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(item)
+    });
+  }
+
+  nightQueue.length = 0; // キューを空にする
 }
 
 const lastIds = {};
 
 async function checkTikTok() {
+  // 朝7時なら夜中の投稿をまとめて通知
+  await flushNightQueue();
+
   const browser = await chromium.launch({
     headless: true,
     args: ["--no-sandbox", "--disable-setuid-sandbox"]
@@ -61,21 +92,27 @@ async function checkTikTok() {
 
     if (!hasTag) continue;
 
-    // 夜中は通知しない
-    if (isQuietHours()) continue;
+    const payload = {
+      discordName: acc.discordName,
+      tiktokUser: user,
+      videoId: latest.id,
+      url: latest.url,
+      thumbnail: latest.thumb,
+      message: "新しい動画が投稿されました！（時間帯判定あり）"
+    };
 
-    await fetch(WORKER_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        discordName: acc.discordName,
-        tiktokUser: user,
-        videoId: latest.id,
-        url: latest.url,
-        thumbnail: latest.thumb,
-        message: "新しい動画が投稿されました！"
-      })
-    });
+    // 通知可能時間か？
+    if (isNotifyHours()) {
+      // 即通知
+      await fetch(WORKER_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+    } else {
+      // 夜中 → キューに保存
+      nightQueue.push(payload);
+    }
 
     lastIds[user] = latest.id;
   }
