@@ -5,7 +5,7 @@ import fetch from "node-fetch";
 const ACCOUNTS = [
   { tiktok: "oden589", discordName: "おでんさん" },
   { tiktok: "nichijou_66", discordName: "日常さん" },
-  { tiktok: "shingekibatoru", discordName: "進撃くん" }
+  { tiktok: "shingekibatoru", discordName: "たけなおさん" }
 ];
 
 // タグフィルタ
@@ -15,8 +15,8 @@ const TAG = "#進撃くん🔥";
 const WORKER_URL = process.env.WORKER_URL;
 
 // 通知可能時間（JST）
-const NOTIFY_START = 6;   // 6時から
-const NOTIFY_END = 23;    // 23時まで
+const NOTIFY_START = 7;    // 7:00 から
+const NOTIFY_END = 23;     // 23:00 まで（22:59まで通知OK）
 
 // 夜中に投稿された動画を保存するキュー
 const nightQueue = [];
