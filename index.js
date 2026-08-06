@@ -1,5 +1,13 @@
+import { execSync } from "child_process";
 import { chromium } from "playwright";
 import fetch from "node-fetch";
+
+// Playwright のブラウザをインストール（Railway環境用）
+try {
+  execSync("npx playwright install chromium", { stdio: "inherit" });
+} catch (e) {
+  console.error("Playwright install failed:", e);
+}
 
 // 監視するアカウント
 const ACCOUNTS = [
