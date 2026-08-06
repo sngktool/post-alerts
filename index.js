@@ -23,8 +23,8 @@ const TAG = "#進撃くん🔥";
 const WORKER_URL = process.env.WORKER_URL;
 
 // 通知可能時間（JST）
-const NOTIFY_START = 7;    // 7:00 から
-const NOTIFY_END = 23;     // 23:00 まで（22:59まで通知OK）
+const NOTIFY_START = 7;     // 7:00 から
+const NOTIFY_END = 24;      // 23:59 まで即時通知OK
 
 // 夜中に投稿された動画をアカウント別に保存するキュー
 const nightQueue = {
@@ -68,10 +68,10 @@ function convertRelativeToJST(relative) {
   return "投稿時刻不明";
 }
 
-// 朝7時に夜中の投稿をアカウント別にまとめて通知
+// 朝6時に夜中の投稿をアカウント別にまとめて通知
 async function flushNightQueue() {
   const h = getJSTHour();
-  if (h !== 7) return;
+  if (h !== 6) return;   // ← 朝6時に変更
 
   const totalVideos =
     nightQueue.oden589.length +
