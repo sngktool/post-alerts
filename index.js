@@ -16,7 +16,7 @@ try {
 // 監視対象アカウント設定
 // ================================
 const ACCOUNTS = [
-  { tiktok: "oden589", discordName: "おでんさん" },
+  { tiktok: "odendesu4", discordName: "おでんさん" },
   { tiktok: "nichijou_66", discordName: "日常さん" },
   { tiktok: "shingekibatoru", discordName: "たけなおさん" }
 ];
