@@ -2,14 +2,19 @@ import { execSync } from "child_process";
 import { chromium } from "playwright";
 import fetch from "node-fetch";
 
-// Playwright のブラウザをインストール（Railway環境用）
+// ================================
+// ✅ 必要な Linux ライブラリをインストール（Railway環境用）
+// ================================
 try {
+  execSync("apt-get update && apt-get install -y libglib2.0-0 libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libasound2 libpangocairo-1.0-0 libpango-1.0-0 libgtk-3-0", { stdio: "inherit" });
   execSync("npx playwright install chromium", { stdio: "inherit" });
 } catch (e) {
-  console.error("Playwright install failed:", e);
+  console.error("Dependency install failed:", e);
 }
 
-// 監視するアカウント
+// ================================
+// 監視対象アカウント設定
+// ================================
 const ACCOUNTS = [
   { tiktok: "oden589", discordName: "おでんさん" },
   { tiktok: "nichijou_66", discordName: "日常さん" },
@@ -68,10 +73,12 @@ function convertRelativeToJST(relative) {
   return "投稿時刻不明";
 }
 
-// 朝6時に夜中の投稿をアカウント別にまとめて通知
+// ================================
+// 朝6時に夜中の投稿をまとめて通知
+// ================================
 async function flushNightQueue() {
   const h = getJSTHour();
-  if (h !== 6) return;   // ← 朝6時に変更
+  if (h !== 6) return;
 
   const totalVideos =
     nightQueue.oden589.length +
