@@ -1,8 +1,5 @@
 import fetch from "node-fetch";
 
-// ================================
-// 完全同期テスト用 checkTikTok()
-// ================================
 async function checkTikTok() {
   const WORKER_URL = process.env.WORKER_URL; // ← 関数内で読み込む
   console.log("WORKER_URL:", WORKER_URL);    // デバッグ確認
@@ -33,5 +30,4 @@ async function checkTikTok() {
   console.log("✅ Railway → Worker にテスト通知を送信しました");
 }
 
-// 5秒ごとに実行（テスト用）
 setInterval(checkTikTok, 5 * 1000);
