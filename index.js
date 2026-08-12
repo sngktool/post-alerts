@@ -3,7 +3,7 @@ import { chromium } from "playwright";
 import fetch from "node-fetch";
 
 // ================================
-// ✅ 必要な Linux ライブラリをインストール（Railway環境用）
+// 必要な Linux ライブラリをインストール（Railway環境用）
 // ================================
 try {
   execSync("apt-get update && apt-get install -y libglib2.0-0 libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libasound2 libpangocairo-1.0-0 libpango-1.0-0 libgtk-3-0", { stdio: "inherit" });
@@ -24,21 +24,21 @@ const ACCOUNTS = [
 // タグフィルタ
 const TAG = "#進撃くん🔥";
 
-// Worker URL（Railwayの環境変数から読み込む）
+// Worker URL
 const WORKER_URL = process.env.WORKER_URL;
 
 // 通知可能時間（JST）
-const NOTIFY_START = 7;     // 7:00 から
-const NOTIFY_END = 24;      // 23:59 まで即時通知OK
+const NOTIFY_START = 7;
+const NOTIFY_END = 24;
 
-// 夜中に投稿された動画をアカウント別に保存するキュー
+// 夜中キュー
 const nightQueue = {
   oden589: [],
   nichijou_66: [],
   shingekibatoru: []
 };
 
-// JSTの現在時刻を取得
+// JSTの現在時刻
 function getJSTHour() {
   const now = new Date();
   return (now.getUTCHours() + 9) % 24;
@@ -50,7 +50,7 @@ function isNotifyHours() {
   return h >= NOTIFY_START && h < NOTIFY_END;
 }
 
-// 相対時刻 → JST に変換
+// 相対時刻 → JST
 function convertRelativeToJST(relative) {
   if (!relative) return "投稿時刻不明";
 
@@ -119,12 +119,28 @@ async function checkTikTok() {
 
   const page = await browser.newPage();
 
+  // ================================
+  // TikTok ブロック完全回避：UA偽装
+  // ================================
+  await page.setExtraHTTPHeaders({
+    "User-Agent":
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+    "Accept-Language": "ja-JP,ja;q=0.9",
+    "sec-ch-ua-mobile": "?1"
+  });
+
   for (const acc of ACCOUNTS) {
     const user = acc.tiktok;
 
+    // ================================
+    // TikTok ページ読み込み（ブロック回避版）
+    // ================================
     await page.goto(`https://www.tiktok.com/@${user}`, {
-      waitUntil: "networkidle"
+      waitUntil: "domcontentloaded",
+      timeout: 45000
     });
+
+    await page.waitForTimeout(1000); // ← TikTok の遅延ロード対策
 
     const latest = await page.evaluate(() => {
       const el = document.querySelector("a[href*='/video/']");
@@ -140,9 +156,13 @@ async function checkTikTok() {
     if (!latest) continue;
     if (lastIds[user] === latest.id) continue;
 
-    await page.goto(latest.url, { waitUntil: "networkidle" });
+    await page.goto(latest.url, {
+      waitUntil: "domcontentloaded",
+      timeout: 45000
+    });
 
-    // タグ判定
+    await page.waitForTimeout(1000);
+
     const hasTag = await page.evaluate((TAG) => {
       const desc = document.querySelector("meta[name='description']")?.content || "";
       return desc.includes(TAG);
@@ -150,7 +170,6 @@ async function checkTikTok() {
 
     if (!hasTag) continue;
 
-    // 動画タイトル
     const title = await page.evaluate(() => {
       const el =
         document.querySelector("h1[data-e2e='video-desc']") ||
@@ -158,13 +177,11 @@ async function checkTikTok() {
       return el?.innerText || el?.content || "タイトルなし";
     });
 
-    // 説明文
     const description = await page.evaluate(() => {
       const el = document.querySelector("meta[name='description']");
       return el?.content || "説明文なし";
     });
 
-    // 投稿時刻（相対表記）
     const postedRelative = await page.evaluate(() => {
       const el = document.querySelector("span[data-e2e='browser-nickname']")?.nextElementSibling;
       return el?.innerText || null;
