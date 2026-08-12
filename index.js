@@ -30,4 +30,4 @@ async function checkTikTok() {
   console.log("✅ Railway → Worker にテスト通知を送信しました");
 }
 
-setInterval(checkTikTok, 5 * 1000);
+//setInterval(checkTikTok, 5 * 1000);
