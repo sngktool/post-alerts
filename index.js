@@ -302,5 +302,5 @@ async function checkTikTok() {
   console.log("✅ TikTok check finished");
 }
 
-setInterval(checkTikTok, 5 * 60 * 1000);
+//setInterval(checkTikTok, 5 * 60 * 1000);
 console.log("⏱ Interval set: checkTikTok every 5 minutes");
