@@ -129,6 +129,24 @@ async function checkTikTok() {
 
   const page = await browser.newPage();
 
+  // ================================
+  // 日本版 TikTok を強制する Cookie
+  // ================================
+  await page.context().addCookies([
+    {
+      name: "lang",
+      value: "ja",
+      domain: ".tiktok.com",
+      path: "/"
+    },
+    {
+      name: "region",
+      value: "JP",
+      domain: ".tiktok.com",
+      path: "/"
+    }
+  ]);
+
   await page.setExtraHTTPHeaders({
     "User-Agent":
       "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
@@ -141,7 +159,10 @@ async function checkTikTok() {
     console.log(`👤 Checking user: ${user}`);
 
     try {
-      await page.goto(`https://www.tiktok.com/@${user}`, {
+      // ================================
+      // 日本版 TikTok を強制ロード
+      // ================================
+      await page.goto(`https://www.tiktok.com/@${user}?lang=ja-JP&region=JP`, {
         waitUntil: "networkidle",
         timeout: 60000,
       });
@@ -150,7 +171,7 @@ async function checkTikTok() {
       continue;
     }
 
-    await page.waitForTimeout(1500);
+    await page.waitForTimeout(2000);
 
     const blocked = await page.evaluate(() => {
       const body = document.body.innerText || "";
@@ -168,7 +189,7 @@ async function checkTikTok() {
     if (blocked) continue;
 
     // ================================
-    // HTML 抽出デバッグ（TikTok DOM 調査用）
+    // HTML 抽出デバッグ（20000文字）
     // ================================
     try {
       const html = await page.content();
@@ -281,5 +302,5 @@ async function checkTikTok() {
   console.log("✅ TikTok check finished");
 }
 
-setInterval(checkTikTok, 2 * 60 * 1000);
+setInterval(checkTikTok, 5 * 60 * 1000);
 console.log("⏱ Interval set: checkTikTok every 5 minutes");
