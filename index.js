@@ -168,13 +168,13 @@ async function checkTikTok() {
     if (blocked) continue;
 
     // ================================
-    // 最新動画取得（TikTok DOM 最新対応版）
+    // 最新動画取得（TikTok DOM 完全対応版）
     // ================================
     const latest = await page.evaluate(() => {
       const selectors = [
+        "div[data-e2e='user-post-item-list'] div[data-e2e='user-post-item'] a[href*='/video/']",
         "div[data-e2e='user-post-item'] a[href*='/video/']",
         "div[data-e2e='user-post'] a[href*='/video/']",
-        "div[data-e2e='user-post-item-list'] a[href*='/video/']",
         "a[href*='/video/']",
       ];
 
