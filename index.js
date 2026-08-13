@@ -168,6 +168,17 @@ async function checkTikTok() {
     if (blocked) continue;
 
     // ================================
+    // HTML 抽出デバッグ（TikTok DOM 調査用）
+    // ================================
+    try {
+      const html = await page.content();
+      console.log("📄 TikTok HTML dump (first 3000 chars):");
+      console.log(html.slice(0, 3000));
+    } catch (e) {
+      console.error("❌ HTML dump failed:", e);
+    }
+
+    // ================================
     // 最新動画取得（TikTok DOM 完全対応版）
     // ================================
     const latest = await page.evaluate(() => {
@@ -270,5 +281,5 @@ async function checkTikTok() {
   console.log("✅ TikTok check finished");
 }
 
-setInterval(checkTikTok, 5 * 60 * 1000);
+setInterval(checkTikTok, 2 * 60 * 1000);
 console.log("⏱ Interval set: checkTikTok every 5 minutes");
