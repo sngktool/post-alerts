@@ -10,7 +10,10 @@ console.log("🚀 Worker started");
 // ================================
 try {
   console.log("📦 Installing dependencies...");
-  execSync("apt-get update && apt-get install -y libglib2.0-0 libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libasound2 libpangocairo-1.0-0 libpango-1.0-0 libgtk-3-0", { stdio: "inherit" });
+  execSync(
+    "apt-get update && apt-get install -y libglib2.0-0 libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libasound2 libpangocairo-1.0-0 libpango-1.0-0 libgtk-3-0",
+    { stdio: "inherit" }
+  );
   execSync("npx playwright install chromium", { stdio: "inherit" });
   console.log("✅ Dependencies installed");
 } catch (e) {
@@ -23,7 +26,7 @@ try {
 const ACCOUNTS = [
   { tiktok: "odendesu4", discordName: "おでんさん" },
   { tiktok: "nichijou_66", discordName: "日常さん" },
-  { tiktok: "shingekibatoru", discordName: "たけなおさん" }
+  { tiktok: "shingekibatoru", discordName: "たけなおさん" },
 ];
 
 const TAG = "#進撃くん🔥";
@@ -35,7 +38,7 @@ const NOTIFY_END = 24;
 const nightQueue = {
   oden589: [],
   nichijou_66: [],
-  shingekibatoru: []
+  shingekibatoru: [],
 };
 
 function getJSTHour() {
@@ -70,6 +73,9 @@ function convertRelativeToJST(relative) {
   return "投稿時刻不明";
 }
 
+// ================================
+// 朝6時に夜中の投稿をまとめて通知
+// ================================
 async function flushNightQueue() {
   const h = getJSTHour();
   if (h !== 6) return;
@@ -92,10 +98,10 @@ async function flushNightQueue() {
       nameMap: {
         oden589: "おでんさん",
         nichijou_66: "日常さん",
-        shingekibatoru: "たけなおさん"
+        shingekibatoru: "たけなおさん",
       },
-      totalCount: totalVideos
-    })
+      totalCount: totalVideos,
+    }),
   });
 
   nightQueue.oden589 = [];
@@ -114,7 +120,7 @@ async function checkTikTok() {
   try {
     browser = await chromium.launch({
       headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"]
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
   } catch (e) {
     console.error("❌ Chromium launch failed:", e);
@@ -127,7 +133,7 @@ async function checkTikTok() {
     "User-Agent":
       "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
     "Accept-Language": "ja-JP,ja;q=0.9",
-    "sec-ch-ua-mobile": "?1"
+    "sec-ch-ua-mobile": "?1",
   });
 
   for (const acc of ACCOUNTS) {
@@ -137,7 +143,7 @@ async function checkTikTok() {
     try {
       await page.goto(`https://www.tiktok.com/@${user}`, {
         waitUntil: "domcontentloaded",
-        timeout: 45000
+        timeout: 45000,
       });
     } catch (e) {
       console.error(`❌ Page load failed for ${user}:`, e);
@@ -159,8 +165,13 @@ async function checkTikTok() {
 
     if (blocked) continue;
 
+    // ================================
+    // 最新動画取得（新DOM対応版）
+    // ================================
     const latest = await page.evaluate(() => {
-      const el = document.querySelector("a[href*='/video/']");
+      const el = document.querySelector(
+        "div[data-e2e='user-post-item'] a[href*='/video/']"
+      );
       if (!el) return null;
 
       const url = el.href;
@@ -177,13 +188,14 @@ async function checkTikTok() {
 
     await page.goto(latest.url, {
       waitUntil: "domcontentloaded",
-      timeout: 45000
+      timeout: 45000,
     });
 
     await page.waitForTimeout(1000);
 
     const hasTag = await page.evaluate((TAG) => {
-      const desc = document.querySelector("meta[name='description']")?.content || "";
+      const desc =
+        document.querySelector("meta[name='description']")?.content || "";
       return desc.includes(TAG);
     }, TAG);
 
@@ -191,10 +203,52 @@ async function checkTikTok() {
 
     if (!hasTag) continue;
 
-    console.log(`📢 Sending notification for ${user}`);
+    const title = await page.evaluate(() => {
+      const el =
+        document.querySelector("h1[data-e2e='video-desc']") ||
+        document.querySelector("meta[name='description']");
+      return el?.innerText || el?.content || "タイトルなし";
+    });
 
-    // 通知処理はそのまま
-    // ...
+    const description = await page.evaluate(() => {
+      const el = document.querySelector("meta[name='description']");
+      return el?.content || "説明文なし";
+    });
+
+    const postedRelative = await page.evaluate(() => {
+      const el = document.querySelector(
+        "span[data-e2e='browser-nickname']"
+      )?.nextElementSibling;
+      return el?.innerText || null;
+    });
+
+    const postedAtJST = convertRelativeToJST(postedRelative);
+
+    const payload = {
+      discordName: acc.discordName,
+      tiktokUser: user,
+      videoId: latest.id,
+      url: latest.url,
+      thumbnail: latest.thumb,
+      title: title,
+      description: description,
+      postedAt: postedAtJST,
+      message: "新しい動画が投稿されました！（時間帯判定あり）",
+    };
+
+    if (isNotifyHours()) {
+      console.log(`📢 Sending notification for ${user}`);
+      await fetch(WORKER_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+    } else {
+      console.log(`🌙 Queued for morning summary: ${user}`);
+      nightQueue[user].push(payload);
+    }
+
+    lastIds[user] = latest.id;
   }
 
   await browser.close();
