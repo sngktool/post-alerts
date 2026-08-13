@@ -172,8 +172,8 @@ async function checkTikTok() {
     // ================================
     try {
       const html = await page.content();
-      console.log("📄 TikTok HTML dump (first 3000 chars):");
-      console.log(html.slice(0, 3000));
+      console.log("📄 TikTok HTML dump (first 20000 chars):");
+      console.log(html.slice(0, 20000));
     } catch (e) {
       console.error("❌ HTML dump failed:", e);
     }
