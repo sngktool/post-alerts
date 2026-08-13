@@ -142,22 +142,24 @@ async function checkTikTok() {
 
     try {
       await page.goto(`https://www.tiktok.com/@${user}`, {
-        waitUntil: "domcontentloaded",
-        timeout: 45000,
+        waitUntil: "networkidle",
+        timeout: 60000,
       });
     } catch (e) {
       console.error(`❌ Page load failed for ${user}:`, e);
       continue;
     }
 
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(1500);
 
     const blocked = await page.evaluate(() => {
       const body = document.body.innerText || "";
       return (
         body.includes("captcha") ||
         body.includes("Access denied") ||
-        body.includes("Too many requests")
+        body.includes("Too many requests") ||
+        body.includes("ログイン") ||
+        body.includes("verify")
       );
     });
 
@@ -166,17 +168,30 @@ async function checkTikTok() {
     if (blocked) continue;
 
     // ================================
-    // 最新動画取得（新DOM対応版）
+    // 最新動画取得（TikTok DOM 最新対応版）
     // ================================
     const latest = await page.evaluate(() => {
-      const el = document.querySelector(
-        "div[data-e2e='user-post-item'] a[href*='/video/']"
-      );
+      const selectors = [
+        "div[data-e2e='user-post-item'] a[href*='/video/']",
+        "div[data-e2e='user-post'] a[href*='/video/']",
+        "div[data-e2e='user-post-item-list'] a[href*='/video/']",
+        "a[href*='/video/']",
+      ];
+
+      let el = null;
+      for (const sel of selectors) {
+        el = document.querySelector(sel);
+        if (el) break;
+      }
+
       if (!el) return null;
 
       const url = el.href;
       const id = url.split("/video/")[1];
-      const thumb = el.querySelector("img")?.src || null;
+
+      const imgEl = el.querySelector("img");
+      const thumb =
+        imgEl?.src || imgEl?.getAttribute("srcset")?.split(" ")[0] || null;
 
       return { id, url, thumb };
     });
